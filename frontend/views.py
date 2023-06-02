@@ -1,15 +1,16 @@
-from django.shortcuts import render
 from django.http import JsonResponse
-from django.views import View
-from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware import csrf
 import json
 import subprocess
 
+def get_csrf_token(request):
+    csrf_token = csrf.get_token(request)
+    return JsonResponse({'csrfToken': csrf_token})
 
-class MyEndpoint(View):
-
-    def post(self, request):
+@csrf_exempt
+def post_data(request):
+    if request.method == 'POST':
         data = json.loads(request.body)
         input_data = str(data.get('inputValue'))
         output_value = subprocess.check_output(['python', 'scripts/main.py', input_data])
@@ -21,11 +22,3 @@ class MyEndpoint(View):
          }
         return JsonResponse(response_data)
 
-@csrf_exempt
-def get_csrf_token(request):
-    if request.method == 'GET':
-        csrf_token = get_token(request)
-        return JsonResponse({'csrfToken': csrf_token})
-
-def index(request):
-    return render(request, 'index.html')

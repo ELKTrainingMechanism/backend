@@ -4,11 +4,11 @@ import sys
 
 # Read input value from command-line arguments
 input_value = sys.argv[1]
-print("this is ssh replying: ")
+print("SSH printing: ")
 # Process the input and produce output
-output_value = input_value * 7
+output_value = input_value * 2
 
 # Print the output value
 print(output_value)
-print("getting out of ssh lol, ")
+print("\n Exiting SSH ")
 

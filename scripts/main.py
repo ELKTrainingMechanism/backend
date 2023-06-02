@@ -41,6 +41,6 @@ stdin, stdout, stderr = ssh_client.exec_command(commandlist)
 # Read the output from the remote GPU
 output = stdout.read().decode()
 print(output)
-print("ssh is over! ")
+print("SSH closed")
 # Close the SSH connection
 ssh_client.close()
