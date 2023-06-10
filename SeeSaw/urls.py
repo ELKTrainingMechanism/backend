@@ -7,5 +7,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/get_csrf_token/', ensure_csrf_cookie(views.get_csrf_token), name='get_csrf_token'),
     path('api/post-data/', views.post_data, name='post_data'),
+    path('api/post_custom_training_args/', views.post_custom_training_args, name='post_custom_training_args'),
 ]
 
