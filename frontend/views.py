@@ -30,11 +30,36 @@ def post_custom_training_args(request):
         input_data = input_data.replace(" ","")
         output_value = subprocess.check_output(['python', 'scripts/replace_args.py', input_data])
         output_value = output_value.decode('utf-8')
-        # Process the input data    
+        dict_values = output_value.split(',')
+
+        def get_value(string_arg):
+            colon_index = string_arg.index(':')
+            substring = string_arg[colon_index + 2:]
+            integer_value = float(substring)
+            return integer_value
+
+        list_values = []    
+
+        for dict_value in dict_values:
+            list_values.append(get_value(dict_value))
+
+        output_value = {
+            'small_training_losses': list_values[0],
+            'small_losses': list_values[1],
+            'small_perplexities': list_values[2],
+            'medium_training_losses': list_values[3],
+            'medium_losses': list_values[4],
+            'medium_perplexities': list_values[5],
+            'scaled_training_losses': list_values[6],
+            'scaled_losses': list_values[7],
+            'scaled_perplexities': list_values[8],
+        }    
+
         response_data = {
-        'message': 'You have submitted the following arguments: ' + str(input_data),
+        'message': str(input_data),
         'output' : output_value,
         }
+        
         return JsonResponse(response_data)
 
 
