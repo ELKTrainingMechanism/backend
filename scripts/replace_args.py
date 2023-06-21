@@ -20,11 +20,11 @@ def ssh_and_execute(hostname, username, source_file, destination_file, commands)
 
     stdin, stdout, stderr = ssh_client.exec_command("python3 testscripx.py")
     stdout.channel.set_combine_stderr(True)
-    # stdout = ssh_client.exec_command('cat result.txt')[1]  # Commenting this out will output the standard print statements
     performance_string = stdout.read().decode()
 
-    # for command in commands:
-    # stdin, stdout, stderr = ssh_client.exec_command('cat result.txt')
+    # Commenting this out will output the standard print statements
+    stdin, stdout, stderr = ssh_client.exec_command('cat result.txt')
+    performance_string = stdout.read().decode()
     
     # Close SSH connection
     ssh_client.close()
