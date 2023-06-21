@@ -1,5 +1,6 @@
 import os
 os.system("pip install fancy_einsum einops datasets transformers git+https://github.com/neelnanda-io/Easy-Transformer.git@clean-transformer-demo matplotlib plotly")
+os.system("mkdir gptfiles")
 
 #importing necessary modules
 import einops
@@ -21,9 +22,31 @@ torch.manual_seed(42)
 import sys
 import json
 
+def get_value(string_arg):
+    # Find the index of the colon
+    colon_index = string_arg.index(':')
+    # Extract the substring after the colon
+    substring = string_arg[colon_index + 1:]
+    # Convert the substring to an integer
+    integer_value = int(substring)
+    return integer_value 
+
 # # Read input value from command-line arguments
-input_value = sys.argv[1]
-input_value = eval(input_value)
+input_d_model = get_value(sys.argv[1])
+input_n_heads = get_value(sys.argv[6])
+input_d_head = get_value(sys.argv[4])
+input_d_mlp = get_value(sys.argv[5])
+input_n_layers = get_value(sys.argv[7])
+
+input_n_ctx = get_value(sys.argv[1])
+
+input_d_model2 = sys.argv[8]
+input_n_heads2 = sys.argv[13]
+input_d_head2 = sys.argv[11]
+input_d_mlp2 = sys.argv[12]
+input_n_layers2 = sys.argv[14]
+# print(input_value)
+# input_value = eval(input_value)
 # print("The input type is: ")
 # output_value = input_value['d_model']
 
@@ -312,7 +335,7 @@ def train_model(data_loader, model, num_epochs, max_steps):
           optimizer.step()
           optimizer.zero_grad()
           training_losses.append(loss.item())
-          filepath = '/py/gptfiles/' + model.cfg.name
+          filepath = '/gptfiles/' + model.cfg.name
 
           # Calculate average loss and perplexity
           if c % 100 == 0:
@@ -329,7 +352,7 @@ def train_model(data_loader, model, num_epochs, max_steps):
   return training_losses, losses, perplexities
 
 # initializing configuration of small model
-model_cfg_small = Config(name='small', debug=False, d_model=input_value['d_model'], n_heads=input_value['n_heads'], d_head=input_value['d_head'], d_mlp=input_value['d_mlp'], n_layers=input_value['n_layers'], n_ctx=256, d_vocab=reference_gpt2.cfg.d_vocab)
+model_cfg_small = Config(name='small', debug=False, d_model=input_d_model, n_heads=input_n_heads, d_head=input_d_head, d_mlp=input_d_mlp, n_layers=input_n_layers, n_ctx=256, d_vocab=reference_gpt2.cfg.d_vocab)
 # initializing the small model
 
 output = f"The small model config is: {model_cfg_small}"
@@ -345,7 +368,7 @@ model_small.cuda()
 
 small_training_losses, small_losses, small_perplexities = train_model(data_loader, model_small, num_epochs, max_steps)
 
-output = f"Training Losses: {small_training_losses[-1]:.4f}, Loss: {small_losses[-1]:.4f}, Perplexity: {small_perplexities[-1]:.4f}"
+output = f"Training Losses: {small_training_losses[0]:.4f}, Loss: {small_losses[0]:.4f}, Perplexity: {small_perplexities[0]:.4f}"
 
 # Save the output to a file
 with open("result.txt", "w") as file:
