@@ -1,7 +1,7 @@
 # #importing necessary modules
 # import einops
 # from fancy_einsum import einsum
-# from dataclasses import dataclass
+from dataclasses import dataclass
 # from easy_transformer import EasyTransformer
 import torch
 # import torch.nn as nn
@@ -39,22 +39,29 @@ output = f"The device is: {device}"
 with open("result.txt", "w") as file:
     file.write(output)
 
-# # defining all necessary classes for the DemoTransformerClass
-# @dataclass
-# class Config:
-#     name: str = 'None'
-#     d_model: int = 768
-#     debug: bool = True
-#     layer_norm_eps: float = 1e-5
-#     d_vocab: int = 50257
-#     init_range: float = 0.02
-#     n_ctx: int = 1024
-#     d_head: int = 64
-#     d_mlp: int = 3072
-#     n_heads: int = 12
-#     n_layers: int = 12
+# defining all necessary classes for the DemoTransformerClass
+@dataclass
+class Config:
+    name: str = 'None'
+    d_model: int = 768
+    debug: bool = True
+    layer_norm_eps: float = 1e-5
+    d_vocab: int = 50257
+    init_range: float = 0.02
+    n_ctx: int = 1024
+    d_head: int = 64
+    d_mlp: int = 3072
+    n_heads: int = 12
+    n_layers: int = 12
 
-# cfg = Config()
+cfg = Config()
+print(cfg)
+
+output = f"The config is: {cfg}"
+
+# Save the output to a file
+with open("result.txt", "w") as file:
+    file.write(output)
 
 # class Embed(nn.Module):
 #     def __init__(self, cfg):

@@ -20,8 +20,11 @@ def ssh_and_execute(hostname, username, source_file, destination_file, commands)
 
     stdin, stdout, stderr = ssh_client.exec_command("python3 testscripx.py")
     stdout.channel.set_combine_stderr(True)
-    stdout = ssh_client.exec_command('cat result.txt')[1]  # Commenting this out will output the standard print statements
+    # stdout = ssh_client.exec_command('cat result.txt')[1]  # Commenting this out will output the standard print statements
     performance_string = stdout.read().decode()
+
+    # for command in commands:
+    # stdin, stdout, stderr = ssh_client.exec_command('cat result.txt')
     
     # Close SSH connection
     ssh_client.close()
@@ -34,7 +37,7 @@ gpu_username = 'root'
 local_file_path = 'scripts/scaleduptransformer.py'
 # local_file_path = 'scripts/testscript.py'
 remote_file_path = '/root/testscripx.py'
-command_list = ['ls -l', 'cat file.txt', 'pip install torch']
+command_list = ['ls -l', 'pip install torch']
 
 output = ssh_and_execute(gpu_hostname, gpu_username, local_file_path, remote_file_path, command_list)
 print(output)
