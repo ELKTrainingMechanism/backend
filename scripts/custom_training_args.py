@@ -27,7 +27,7 @@ ssh_client.connect(gpu_ip, username=username, password=password)
 scp = SCPClient(ssh_client.get_transport())
 
 # Copy the local file to the remote server
-local_path = 'scripts/replace_args.py'
+local_path = 'scripts/scaleduptransformer.py'
 remote_path = 'py/'
 scp.put(local_path, remote_path)
 
@@ -36,7 +36,7 @@ scp.close()
 
 input_value = '"' + input_value + '"'
 # Execute commands on the remote GPU
-commandlist = 'cd py && python replace_args.py ' + input_value
+commandlist = 'cd py && python scaleduptransformer.py ' + input_value
 stdin, stdout, stderr = ssh_client.exec_command(commandlist)
 
 # Read the output from the remote GPU
