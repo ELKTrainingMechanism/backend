@@ -27,7 +27,7 @@ def post_custom_training_args(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         input_data = data.get('customTrainingArgs')
-        output_value = subprocess.check_output(['python', 'scripts/replace_args.py', str(input_data)])
+        output_value = subprocess.check_output(['python', 'scripts/replace_args.py', str(input_data).replace(" ", "")])
         output_value = output_value.decode('utf-8')
         # Process the input data    
         response_data = {
@@ -35,3 +35,5 @@ def post_custom_training_args(request):
         'output' : output_value,
         }
         return JsonResponse(response_data)
+
+

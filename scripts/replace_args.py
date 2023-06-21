@@ -1,4 +1,6 @@
 import paramiko
+import sys
+input_value = sys.argv[1]
 
 def ssh_and_execute(hostname, username, source_file, destination_file, commands):
     # SSH connection
@@ -18,13 +20,13 @@ def ssh_and_execute(hostname, username, source_file, destination_file, commands)
         # stdout.channel.set_combine_stderr(True)
         # command_output += stdout.read().decode()
 
-    stdin, stdout, stderr = ssh_client.exec_command("python3 testscripx.py")
+    stdin, stdout, stderr = ssh_client.exec_command(f"python3 testscripx.py {input_value}")
     stdout.channel.set_combine_stderr(True)
     performance_string = stdout.read().decode()
 
     # Commenting this out will output the standard print statements
-    stdin, stdout, stderr = ssh_client.exec_command('cat result.txt')
-    performance_string = stdout.read().decode()
+    # stdin, stdout, stderr = ssh_client.exec_command('cat result.txt')
+    # performance_string = stdout.read().decode()
     
     # Close SSH connection
     ssh_client.close()
@@ -37,7 +39,7 @@ gpu_username = 'root'
 local_file_path = 'scripts/scaleduptransformer.py'
 # local_file_path = 'scripts/testscript.py'
 remote_file_path = '/root/testscripx.py'
-command_list = ['ls -l', 'pip install torch']
+command_list = ['ls -l', 'pip install einops']
 
 output = ssh_and_execute(gpu_hostname, gpu_username, local_file_path, remote_file_path, command_list)
 print(output)

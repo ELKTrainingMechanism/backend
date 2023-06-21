@@ -1,27 +1,29 @@
-# #importing necessary modules
-# import einops
-# from fancy_einsum import einsum
+import os
+os.system("pip install fancy_einsum einops datasets transformers git+https://github.com/neelnanda-io/Easy-Transformer.git@clean-transformer-demo matplotlib plotly")
+
+#importing necessary modules
+import einops
+from fancy_einsum import einsum
 from dataclasses import dataclass
-# from easy_transformer import EasyTransformer
+from easy_transformer import EasyTransformer
 import torch
-# import torch.nn as nn
-# import numpy as np
-# import math
-# from easy_transformer.utils import get_corner, gelu_new, tokenize_and_concatenate
-# import tqdm.auto as tqdm
-# import datasets
-# import transformers
-# import plotly.express as px
+import torch.nn as nn
+import numpy as np
+import math
+from easy_transformer.utils import get_corner, gelu_new, tokenize_and_concatenate
+import tqdm.auto as tqdm
+import datasets
+import transformers
+import plotly.express as px
 
-# torch.manual_seed(42)
-# my_script.py
+torch.manual_seed(42)
 
-# import sys
-# import json
+import sys
+import json
 
 # # Read input value from command-line arguments
-# input_value = sys.argv[1]
-# input_value = eval(input_value)
+input_value = sys.argv[1]
+input_value = eval(input_value)
 # print("The input type is: ")
 # output_value = input_value['d_model']
 
@@ -63,278 +65,291 @@ output = f"The config is: {cfg}"
 with open("result.txt", "w") as file:
     file.write(output)
 
-# class Embed(nn.Module):
-#     def __init__(self, cfg):
-#         super().__init__()
-#         self.cfg = cfg
-#         self.W_E = nn.Parameter(torch.empty((cfg.d_vocab, cfg.d_model)))
-#         nn.init.normal_(self.W_E, std=self.cfg.init_range)
+class Embed(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        self.W_E = nn.Parameter(torch.empty((cfg.d_vocab, cfg.d_model)))
+        nn.init.normal_(self.W_E, std=self.cfg.init_range)
 
-#     def forward(self, tokens):
-#         # tokens: [batch, position]
-#         if self.cfg.debug: print("Tokens:", tokens.shape)
-#         embed = self.W_E[tokens, :] # [batch, position, d_model]
-#         if self.cfg.debug: print("Embeddings:", embed.shape)
-#         return embed
+    def forward(self, tokens):
+        # tokens: [batch, position]
+        if self.cfg.debug: print("Tokens:", tokens.shape)
+        embed = self.W_E[tokens, :] # [batch, position, d_model]
+        if self.cfg.debug: print("Embeddings:", embed.shape)
+        return embed
 
-# class LayerNorm(nn.Module):
-#     def __init__(self, cfg):
-#         super().__init__()
-#         self.cfg = cfg
-#         self.w = nn.Parameter(torch.ones(cfg.d_model))
-#         self.b = nn.Parameter(torch.zeros(cfg.d_model))
+class LayerNorm(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        self.w = nn.Parameter(torch.ones(cfg.d_model))
+        self.b = nn.Parameter(torch.zeros(cfg.d_model))
 
-#     def forward(self, residual):
-#         # residual: [batch, position, d_model]
-#         if self.cfg.debug: print("Residual:", residual.shape)
-#         residual = residual - einops.reduce(residual, "batch position d_model -> batch position 1", "mean")
-#         # Calculate the variance, square root it. Add in an epsilon to prevent divide by zero.
-#         scale = (einops.reduce(residual.pow(2), "batch position d_model -> batch position 1", "mean") + cfg.layer_norm_eps).sqrt()
-#         normalized = residual / scale
-#         normalized = normalized * self.w + self.b
-#         if self.cfg.debug: print("Normalized:", residual.shape)
-#         return normalized
+    def forward(self, residual):
+        # residual: [batch, position, d_model]
+        if self.cfg.debug: print("Residual:", residual.shape)
+        residual = residual - einops.reduce(residual, "batch position d_model -> batch position 1", "mean")
+        # Calculate the variance, square root it. Add in an epsilon to prevent divide by zero.
+        scale = (einops.reduce(residual.pow(2), "batch position d_model -> batch position 1", "mean") + cfg.layer_norm_eps).sqrt()
+        normalized = residual / scale
+        normalized = normalized * self.w + self.b
+        if self.cfg.debug: print("Normalized:", residual.shape)
+        return normalized
 
-# class PosEmbed(nn.Module):
-#   def __init__(self, cfg):
-#       super().__init__()
-#       self.cfg = cfg
-#       self.W_pos = nn.Parameter(torch.empty((cfg.n_ctx, cfg.d_model)))
-#       nn.init.normal_(self.W_pos, std=self.cfg.init_range)
+class PosEmbed(nn.Module):
+  def __init__(self, cfg):
+      super().__init__()
+      self.cfg = cfg
+      self.W_pos = nn.Parameter(torch.empty((cfg.n_ctx, cfg.d_model)))
+      nn.init.normal_(self.W_pos, std=self.cfg.init_range)
 
-#   def forward(self, tokens):
-#       # tokens: [batch, position]
-#       if self.cfg.debug: print("Tokens:", tokens.shape)
-#       pos_embed = self.W_pos[:tokens.size(1), :] # [position, d_model]
-#       pos_embed = einops.repeat(pos_embed, "position d_model -> batch position d_model", batch=tokens.size(0))
-#       if self.cfg.debug: print("pos_embed:", pos_embed.shape)
-#       return pos_embed
+  def forward(self, tokens):
+      # tokens: [batch, position]
+      if self.cfg.debug: print("Tokens:", tokens.shape)
+      pos_embed = self.W_pos[:tokens.size(1), :] # [position, d_model]
+      pos_embed = einops.repeat(pos_embed, "position d_model -> batch position d_model", batch=tokens.size(0))
+      if self.cfg.debug: print("pos_embed:", pos_embed.shape)
+      return pos_embed
 
-# class Attention(nn.Module):
-#   def __init__(self, cfg):
-#       super().__init__()
-#       self.cfg = cfg
-#       self.W_Q = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-#       nn.init.normal_(self.W_Q, std=self.cfg.init_range)
-#       self.b_Q = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-#       self.W_K = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-#       nn.init.normal_(self.W_K, std=self.cfg.init_range)
-#       self.b_K = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-#       self.W_V = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-#       nn.init.normal_(self.W_V, std=self.cfg.init_range)
-#       self.b_V = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
+class Attention(nn.Module):
+  def __init__(self, cfg):
+      super().__init__()
+      self.cfg = cfg
+      self.W_Q = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+      nn.init.normal_(self.W_Q, std=self.cfg.init_range)
+      self.b_Q = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
+      self.W_K = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+      nn.init.normal_(self.W_K, std=self.cfg.init_range)
+      self.b_K = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
+      self.W_V = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+      nn.init.normal_(self.W_V, std=self.cfg.init_range)
+      self.b_V = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
 
-#       self.W_O = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
-#       nn.init.normal_(self.W_O, std=self.cfg.init_range)
-#       self.b_O = nn.Parameter(torch.zeros((cfg.d_model)))
+      self.W_O = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
+      nn.init.normal_(self.W_O, std=self.cfg.init_range)
+      self.b_O = nn.Parameter(torch.zeros((cfg.d_model)))
 
-#       self.register_buffer("IGNORE", torch.tensor(-1e5, dtype=torch.float32, device=device))
+      self.register_buffer("IGNORE", torch.tensor(-1e5, dtype=torch.float32, device=device))
 
-#   def forward(self, normalized_resid_pre):
-#       # normalized_resid_pre: [batch, position, d_model]
-#       if self.cfg.debug: print("Normalized_resid_pre:", normalized_resid_pre.shape)
+  def forward(self, normalized_resid_pre):
+      # normalized_resid_pre: [batch, position, d_model]
+      if self.cfg.debug: print("Normalized_resid_pre:", normalized_resid_pre.shape)
 
-#       q = einsum("batch query_pos d_model, n_heads d_model d_head -> batch query_pos n_heads d_head", normalized_resid_pre, self.W_Q) + self.b_Q
-#       k = einsum("batch key_pos d_model, n_heads d_model d_head -> batch key_pos n_heads d_head", normalized_resid_pre, self.W_K) + self.b_K
+      q = einsum("batch query_pos d_model, n_heads d_model d_head -> batch query_pos n_heads d_head", normalized_resid_pre, self.W_Q) + self.b_Q
+      k = einsum("batch key_pos d_model, n_heads d_model d_head -> batch key_pos n_heads d_head", normalized_resid_pre, self.W_K) + self.b_K
 
-#       attn_scores = einsum("batch query_pos n_heads d_head, batch key_pos n_heads d_head -> batch n_heads query_pos key_pos", q, k)
-#       attn_scores = attn_scores / math.sqrt(self.cfg.d_head)
-#       attn_scores = self.apply_causal_mask(attn_scores)
+      attn_scores = einsum("batch query_pos n_heads d_head, batch key_pos n_heads d_head -> batch n_heads query_pos key_pos", q, k)
+      attn_scores = attn_scores / math.sqrt(self.cfg.d_head)
+      attn_scores = self.apply_causal_mask(attn_scores)
 
-#       pattern = attn_scores.softmax(dim=-1) # [batch, n_head, query_pos, key_pos]
+      pattern = attn_scores.softmax(dim=-1) # [batch, n_head, query_pos, key_pos]
 
-#       v = einsum("batch key_pos d_model, n_heads d_model d_head -> batch key_pos n_heads d_head", normalized_resid_pre, self.W_V) + self.b_V
+      v = einsum("batch key_pos d_model, n_heads d_model d_head -> batch key_pos n_heads d_head", normalized_resid_pre, self.W_V) + self.b_V
 
-#       z = einsum("batch n_heads query_pos key_pos, batch key_pos n_heads d_head -> batch query_pos n_heads d_head", pattern, v)
+      z = einsum("batch n_heads query_pos key_pos, batch key_pos n_heads d_head -> batch query_pos n_heads d_head", pattern, v)
 
-#       attn_out = einsum("batch query_pos n_heads d_head, n_heads d_head d_model -> batch query_pos d_model", z, self.W_O) + self.b_O
-#       return attn_out
+      attn_out = einsum("batch query_pos n_heads d_head, n_heads d_head d_model -> batch query_pos d_model", z, self.W_O) + self.b_O
+      return attn_out
 
-#   def apply_causal_mask(self, attn_scores):
-#       # attn_scores: [batch, n_heads, query_pos, key_pos]
-#       mask = torch.triu(torch.ones(attn_scores.size(-2), attn_scores.size(-1), device=attn_scores.device), diagonal=1).bool()
-#       attn_scores.masked_fill_(mask, self.IGNORE)
-#       return attn_scores
+  def apply_causal_mask(self, attn_scores):
+      # attn_scores: [batch, n_heads, query_pos, key_pos]
+      mask = torch.triu(torch.ones(attn_scores.size(-2), attn_scores.size(-1), device=attn_scores.device), diagonal=1).bool()
+      attn_scores.masked_fill_(mask, self.IGNORE)
+      return attn_scores
 
-# class MLP(nn.Module):
-#     def __init__(self, cfg):
-#         super().__init__()
-#         self.cfg = cfg
-#         self.W_in = nn.Parameter(torch.empty((cfg.d_model, cfg.d_mlp)))
-#         nn.init.normal_(self.W_in, std=self.cfg.init_range)
-#         self.b_in = nn.Parameter(torch.zeros((cfg.d_mlp)))
-#         self.W_out = nn.Parameter(torch.empty((cfg.d_mlp, cfg.d_model)))
-#         nn.init.normal_(self.W_out, std=self.cfg.init_range)
-#         self.b_out = nn.Parameter(torch.zeros((cfg.d_model)))
+class MLP(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        self.W_in = nn.Parameter(torch.empty((cfg.d_model, cfg.d_mlp)))
+        nn.init.normal_(self.W_in, std=self.cfg.init_range)
+        self.b_in = nn.Parameter(torch.zeros((cfg.d_mlp)))
+        self.W_out = nn.Parameter(torch.empty((cfg.d_mlp, cfg.d_model)))
+        nn.init.normal_(self.W_out, std=self.cfg.init_range)
+        self.b_out = nn.Parameter(torch.zeros((cfg.d_model)))
 
-#     def forward(self, normalized_resid_mid):
-#         # normalized_resid_mid: [batch, position, d_model]
-#         if self.cfg.debug: print("Normalized_resid_mid:", normalized_resid_mid.shape)
-#         pre = einsum("batch position d_model, d_model d_mlp -> batch position d_mlp", normalized_resid_mid, self.W_in) + self.b_in
-#         post = gelu_new(pre)
-#         mlp_out = einsum("batch position d_mlp, d_mlp d_model -> batch position d_model", post, self.W_out) + self.b_out
-#         return mlp_out
+    def forward(self, normalized_resid_mid):
+        # normalized_resid_mid: [batch, position, d_model]
+        if self.cfg.debug: print("Normalized_resid_mid:", normalized_resid_mid.shape)
+        pre = einsum("batch position d_model, d_model d_mlp -> batch position d_mlp", normalized_resid_mid, self.W_in) + self.b_in
+        post = gelu_new(pre)
+        mlp_out = einsum("batch position d_mlp, d_mlp d_model -> batch position d_model", post, self.W_out) + self.b_out
+        return mlp_out
 
-# class TransformerBlock(nn.Module):
-#     def __init__(self, cfg):
-#         super().__init__()
-#         self.cfg = cfg
+class TransformerBlock(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
 
-#         self.ln1 = LayerNorm(cfg)
-#         self.attn = Attention(cfg)
-#         self.ln2 = LayerNorm(cfg)
-#         self.mlp = MLP(cfg)
+        self.ln1 = LayerNorm(cfg)
+        self.attn = Attention(cfg)
+        self.ln2 = LayerNorm(cfg)
+        self.mlp = MLP(cfg)
 
-#     def forward(self, resid_pre):
-#         # resid_pre [batch, position, d_model]
-#         normalized_resid_pre = self.ln1(resid_pre)
-#         attn_out = self.attn(normalized_resid_pre)
-#         resid_mid = resid_pre + attn_out
+    def forward(self, resid_pre):
+        # resid_pre [batch, position, d_model]
+        normalized_resid_pre = self.ln1(resid_pre)
+        attn_out = self.attn(normalized_resid_pre)
+        resid_mid = resid_pre + attn_out
 
-#         normalized_resid_mid = self.ln2(resid_mid)
-#         mlp_out = self.mlp(normalized_resid_mid)
-#         resid_post = resid_mid + mlp_out
-#         return resid_post
+        normalized_resid_mid = self.ln2(resid_mid)
+        mlp_out = self.mlp(normalized_resid_mid)
+        resid_post = resid_mid + mlp_out
+        return resid_post
 
-# class Unembed(nn.Module):
-#   def __init__(self, cfg):
-#       super().__init__()
-#       self.cfg = cfg
-#       self.W_U = nn.Parameter(torch.empty((cfg.d_model, cfg.d_vocab)))
-#       nn.init.normal_(self.W_U, std=self.cfg.init_range)
-#       self.b_U = nn.Parameter(torch.zeros((cfg.d_vocab), requires_grad=False))
+class Unembed(nn.Module):
+  def __init__(self, cfg):
+      super().__init__()
+      self.cfg = cfg
+      self.W_U = nn.Parameter(torch.empty((cfg.d_model, cfg.d_vocab)))
+      nn.init.normal_(self.W_U, std=self.cfg.init_range)
+      self.b_U = nn.Parameter(torch.zeros((cfg.d_vocab), requires_grad=False))
 
-#   def forward(self, normalized_resid_final):
-#       # normalized_resid_final [batch, position, d_model]
-#       if self.cfg.debug: print("Normalized_resid_final:", normalized_resid_final.shape)
-#       logits = einsum("batch position d_model, d_model d_vocab -> batch position d_vocab", normalized_resid_final, self.W_U) + self.b_U
-#       return logits
+  def forward(self, normalized_resid_final):
+      # normalized_resid_final [batch, position, d_model]
+      if self.cfg.debug: print("Normalized_resid_final:", normalized_resid_final.shape)
+      logits = einsum("batch position d_model, d_model d_vocab -> batch position d_vocab", normalized_resid_final, self.W_U) + self.b_U
+      return logits
 
-# # defining subclass to initialize transformers
-# class DemoTransformer(nn.Module):
-#     def __init__(self, cfg):
-#         super().__init__()
-#         self.cfg = cfg
-#         self.embed = Embed(cfg)
-#         self.pos_embed = PosEmbed(cfg)
-#         self.blocks = nn.ModuleList([TransformerBlock(cfg) for _ in range(cfg.n_layers)])
-#         self.ln_final = LayerNorm(cfg)
-#         self.unembed = Unembed(cfg)
+# defining subclass to initialize transformers
+class DemoTransformer(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        self.embed = Embed(cfg)
+        self.pos_embed = PosEmbed(cfg)
+        self.blocks = nn.ModuleList([TransformerBlock(cfg) for _ in range(cfg.n_layers)])
+        self.ln_final = LayerNorm(cfg)
+        self.unembed = Unembed(cfg)
 
-#     def forward(self, tokens):
-#         # tokens [batch, position]
-#         embed = self.embed(tokens)
-#         pos_embed = self.pos_embed(tokens)
-#         residual = embed + pos_embed
-#         for block in self.blocks:
-#             residual = block(residual)
-#         normalized_resid_final = self.ln_final(residual)
-#         logits = self.unembed(normalized_resid_final)
-#         # logits have shape [batch, position, logits]
-#         return logits
+    def forward(self, tokens):
+        # tokens [batch, position]
+        embed = self.embed(tokens)
+        pos_embed = self.pos_embed(tokens)
+        residual = embed + pos_embed
+        for block in self.blocks:
+            residual = block(residual)
+        normalized_resid_final = self.ln_final(residual)
+        logits = self.unembed(normalized_resid_final)
+        # logits have shape [batch, position, logits]
+        return logits
 
-# # loading reference gpt small and medium models for their tokenizers and vocabulary
-# reference_gpt2 = EasyTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
+# loading reference gpt small and medium models for their tokenizers and vocabulary
+reference_gpt2 = EasyTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
 
-# def lm_cross_entropy_loss(logits, tokens):
-#     # Measure next token loss
-#     # Logits have shape [batch, position, d_vocab]
-#     # Tokens have shape [batch, position]
-#     log_probs = logits.log_softmax(dim=-1)
-#     pred_log_probs = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
-#     return -pred_log_probs.mean()
+def lm_cross_entropy_loss(logits, tokens):
+    # Measure next token loss
+    # Logits have shape [batch, position, d_vocab]
+    # Tokens have shape [batch, position]
+    log_probs = logits.log_softmax(dim=-1)
+    pred_log_probs = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
+    return -pred_log_probs.mean()
 
-# def save_checkpoint(model, optimizer, epoch, filepath):
-#     checkpoint = {
-#         'model_state_dict': model.state_dict(),
-#         'optimizer_state_dict': optimizer.state_dict(),
-#         'epoch': epoch
-#     }
-#     torch.save(checkpoint, filepath)
+def save_checkpoint(model, optimizer, epoch, filepath):
+    checkpoint = {
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'epoch': epoch
+    }
+    torch.save(checkpoint, filepath)
 
-# def calculate_metrics(model):
-#     total_loss = 0
-#     total_words = 0
+def calculate_metrics(model):
+    total_loss = 0
+    total_words = 0
 
-#     with torch.no_grad():
-#         for batch in (tester_data_loader):
-#             tokens = batch['tokens'].cuda()
-#             logits = model(tokens)
+    with torch.no_grad():
+        for batch in (tester_data_loader):
+            tokens = batch['tokens'].cuda()
+            logits = model(tokens)
 
-#             # Calculate the cross-entropy loss
-#             loss = lm_cross_entropy_loss(logits, tokens)
+            # Calculate the cross-entropy loss
+            loss = lm_cross_entropy_loss(logits, tokens)
 
-#             total_loss += loss.item() * tokens.numel()
-#             total_words += tokens.numel()
+            total_loss += loss.item() * tokens.numel()
+            total_words += tokens.numel()
 
-#     # Calculate average loss and perplexity
-#     average_loss = total_loss / total_words
-#     perplexity = math.exp(average_loss)
-#     return perplexity, average_loss
+    # Calculate average loss and perplexity
+    average_loss = total_loss / total_words
+    perplexity = math.exp(average_loss)
+    return perplexity, average_loss
 
-# # initializing the training hyperparameters
-# batch_size = 1
-# num_epochs = 1
-# max_steps = 1
-# log_every = 10
-# lr = 1e-3
-# weight_decay = 1e-2
+# initializing the training hyperparameters
+batch_size = 1
+num_epochs = 1
+max_steps = 1
+log_every = 10
+lr = 1e-3
+weight_decay = 1e-2
 
-# # loading the training dataset for the model
-# dataset = datasets.load_dataset('wikitext','wikitext-103-raw-v1', split="train")
-# testerdataset = datasets.load_dataset('wikitext','wikitext-103-raw-v1', split="test")
+# loading the training dataset for the model
+dataset = datasets.load_dataset('wikitext','wikitext-103-raw-v1', split="train")
+testerdataset = datasets.load_dataset('wikitext','wikitext-103-raw-v1', split="test")
 
-# # tokenization function
-# def tokenize_dataset(dataset,model_cfg,batch_size):
-#   tokens_dataset = tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
-#   data_loader = torch.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
-#   return data_loader
+# tokenization function
+def tokenize_dataset(dataset,model_cfg,batch_size):
+  tokens_dataset = tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
+  data_loader = torch.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
+  return data_loader
 
-# # train function
-# def train_model(data_loader, model, num_epochs, max_steps):
-#   # defining the optimizer to be used
-#   optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-#   training_losses = []
-#   losses = []
-#   perplexities = []
-#   total_loss = 0
-#   total_words = 0
-#   print("Number of steps:", max_steps)
-#   print("Number of batches:", len(data_loader))
-#   for epoch in range(num_epochs):
-#       for c, batch in tqdm.tqdm(enumerate(data_loader)):
-#           tokens = batch['tokens'].cuda()
-#           logits = model(tokens)
-#           loss = lm_cross_entropy_loss(logits, tokens)
-#           loss.backward()
-#           optimizer.step()
-#           optimizer.zero_grad()
-#           training_losses.append(loss.item())
-#           filepath = '/py/gptfiles/' + model.cfg.name
+# train function
+def train_model(data_loader, model, num_epochs, max_steps):
+  # defining the optimizer to be used
+  optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+  training_losses = []
+  losses = []
+  perplexities = []
+  total_loss = 0
+  total_words = 0
+  print("Number of steps:", max_steps)
+  print("Number of batches:", len(data_loader))
+  for epoch in range(num_epochs):
+      for c, batch in tqdm.tqdm(enumerate(data_loader)):
+          tokens = batch['tokens'].cuda()
+          logits = model(tokens)
+          loss = lm_cross_entropy_loss(logits, tokens)
+          loss.backward()
+          optimizer.step()
+          optimizer.zero_grad()
+          training_losses.append(loss.item())
+          filepath = '/py/gptfiles/' + model.cfg.name
 
-#           # Calculate average loss and perplexity
-#           if c % 100 == 0:
-#               iteration_perplexity, iteration_loss = calculate_metrics(model)
-#               losses.append(iteration_loss)
-#               perplexities.append(iteration_perplexity)
-#               print(f"Step: {c}, Loss: {iteration_loss:.4f}, Perplexity: {iteration_perplexity:.4f}")
-#           if c % 1000 == 0:
-#               save_checkpoint(model, optimizer, epoch, filepath)
-#           if c > max_steps:
-#               save_checkpoint(model, optimizer, epoch, filepath)
-#               break
+          # Calculate average loss and perplexity
+          if c % 100 == 0:
+              iteration_perplexity, iteration_loss = calculate_metrics(model)
+              losses.append(iteration_loss)
+              perplexities.append(iteration_perplexity)
+              print(f"Step: {c}, Loss: {iteration_loss:.4f}, Perplexity: {iteration_perplexity:.4f}")
+          if c % 1000 == 0:
+              save_checkpoint(model, optimizer, epoch, filepath)
+          if c > max_steps:
+              save_checkpoint(model, optimizer, epoch, filepath)
+              break
 
-#   return training_losses, losses, perplexities
+  return training_losses, losses, perplexities
 
-# # initializing configuration of small model
-# model_cfg_small = Config(name='small', debug=False, d_model=input_value['d_model'], n_heads=input_value['n_heads'], d_head=input_value['d_head'], d_mlp=input_value['d_mlp'], n_layers=input_value['n_layers'], n_ctx=256, d_vocab=reference_gpt2.cfg.d_vocab)
-# # initializing the small model
-# model_small = DemoTransformer(model_cfg_small)
-# data_loader = tokenize_dataset(dataset,model_small.cfg,batch_size)
-# tester_data_loader = tokenize_dataset(testerdataset,model_small.cfg,batch_size)
-# model_small.cuda()
+# initializing configuration of small model
+model_cfg_small = Config(name='small', debug=False, d_model=input_value['d_model'], n_heads=input_value['n_heads'], d_head=input_value['d_head'], d_mlp=input_value['d_mlp'], n_layers=input_value['n_layers'], n_ctx=256, d_vocab=reference_gpt2.cfg.d_vocab)
+# initializing the small model
 
-# small_training_losses, small_losses, small_perplexities = train_model(data_loader, model_small, num_epochs, max_steps)
+output = f"The small model config is: {model_cfg_small}"
+
+# Save the output to a file
+with open("result.txt", "w") as file:
+    file.write(output)
+
+model_small = DemoTransformer(model_cfg_small)
+data_loader = tokenize_dataset(dataset,model_small.cfg,batch_size)
+tester_data_loader = tokenize_dataset(testerdataset,model_small.cfg,batch_size)
+model_small.cuda()
+
+small_training_losses, small_losses, small_perplexities = train_model(data_loader, model_small, num_epochs, max_steps)
+
+output = f"Training Losses: {small_training_losses[-1]:.4f}, Loss: {small_losses[-1]:.4f}, Perplexity: {small_perplexities[-1]:.4f}"
+
+# Save the output to a file
+with open("result.txt", "w") as file:
+    file.write(output)
 
 # small_model = DemoTransformer(model_small.cfg)
 # small_model.load_state_dict(torch.load('/py/gptfiles/small')['model_state_dict'])
