@@ -3,7 +3,7 @@
 # from fancy_einsum import einsum
 # from dataclasses import dataclass
 # from easy_transformer import EasyTransformer
-# import torch
+import torch
 # import torch.nn as nn
 # import numpy as np
 # import math
@@ -16,22 +16,28 @@
 # torch.manual_seed(42)
 # my_script.py
 
-import sys
-import json
+# import sys
+# import json
 
-# Read input value from command-line arguments
-input_value = sys.argv[1]
-input_value = eval(input_value)
-print("The input type is: ")
-output_value = input_value['d_model']
+# # Read input value from command-line arguments
+# input_value = sys.argv[1]
+# input_value = eval(input_value)
+# print("The input type is: ")
+# output_value = input_value['d_model']
 
-# Print the output value
-print(output_value)
-print("excuse me")
-print("\n Exiting SSH. ")
+# # Print the output value
+# print(output_value)
+# print("excuse me")
+# print("\n Exiting SSH. ")
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# print(device)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
+
+output = f"The device is: {device}"
+
+# Save the output to a file
+with open("result.txt", "w") as file:
+    file.write(output)
 
 # # defining all necessary classes for the DemoTransformerClass
 # @dataclass
