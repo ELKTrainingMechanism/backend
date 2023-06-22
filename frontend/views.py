@@ -44,20 +44,20 @@ def post_custom_training_args(request):
             list_values.append(get_value(dict_value))
 
         output_value = {
-            'small_training_losses': list_values[0],
-            'small_losses': list_values[1],
-            'small_perplexities': list_values[2],
-            'medium_training_losses': list_values[3],
-            'medium_losses': list_values[4],
-            'medium_perplexities': list_values[5],
-            'scaled_training_losses': list_values[6],
-            'scaled_losses': list_values[7],
-            'scaled_perplexities': list_values[8],
+            'small_training_loss': list_values[0],
+            'small_validation_loss': list_values[1],
+            'small_perplexity': list_values[2],
+            'large_training_loss': list_values[3],
+            'large_validation_loss': list_values[4],
+            'large_perplexity': list_values[5],
+            'scaled_training_loss': list_values[6],
+            'scaled_validation_loss': list_values[7],
+            'scaled_perplexity': list_values[8],
         }    
 
         response_data = {
         'message': str(input_data),
-        'output' : output_value,
+        'metrics' : output_value,
         }
         
         return JsonResponse(response_data)
